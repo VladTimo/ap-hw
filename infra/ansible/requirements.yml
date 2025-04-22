@@ -1,0 +1,3 @@
+# use: ansible-galaxy install -r requirements.yml -p roles/
+- src: geerlingguy.nfs
+- src: geerlingguy.docker

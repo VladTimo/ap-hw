@@ -1,0 +1,15 @@
+#SPDX-License-Identifier: MIT-0
+---
+# defaults file for common
+
+sysinfo_commands:
+  disk_type:
+    cmd: "lsblk -l -o name,type"
+  packages_info:
+    cmd: "apt list --installed"
+  cpu_info:
+    cmd: "lscpu"
+  lvm_info:
+    cmd: "lsblk -l | grep part"
+  top_processes_info:
+    cmd: "ps aux --sort=-%cpu | head -n 6"
