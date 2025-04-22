@@ -1,0 +1,49 @@
+- name: disable firewall
+  community.general.ufw:
+    state: disabled
+
+# this part is done cause different ubuntu installations have different netplan configuration files.
+#  In our case it's ec2 instance
+- name: get netplan files
+  ansible.builtin.find:
+    paths: /etc/netplan
+    patterns: "*.yaml"
+    file_type: file
+  register: netplan_files
+
+- name: read netplan file content
+  ansible.builtin.slurp:
+    src: "{{ item.path }}"
+  loop: "{{ netplan_files.files }}"
+  register: netplan_contents
+
+- name: find files with eth0
+  ansible.builtin.set_fact:
+    netplan_config_file: "{{ item.item.path }}"
+  loop: "{{ netplan_contents.results }}"
+  when:
+    - netplan_config_file is not defined
+    - "'eth0' in (item.content | b64decode)"
+
+- name: check for mtu configuration already exists in file
+  ansible.builtin.shell: |
+    grep -A5 'eth0:' {{ netplan_config_file }} | grep -q 'mtu:'
+  register: mtu_present
+  ignore_errors: true
+
+- name: if exists replace mtu value
+  ansible.builtin.replace:
+    path: "{{ netplan_config_file }}"
+    regexp: '^\s*mtu:\s*\d+'
+    replace: '      mtu: 1500'
+  when: mtu_present.rc == 0
+  notify: netplan apply
+
+- name: if mtu not exists - add mtu with value
+  ansible.builtin.lineinfile:
+    path: "{{ netplan_config_file }}"
+    insertafter: '^(\s*)eth0:\s*$'
+    line: "            mtu: 1500"
+  when: mtu_present.rc != 0
+  notify: netplan apply
+

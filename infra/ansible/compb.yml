@@ -1,0 +1,29 @@
+- name: CompB common
+  hosts: compb
+  become: true
+  pre_tasks:
+    - name: create tmp folder
+      ansible.builtin.file:
+        path: "/tmp/letsplay2"
+        state: directory
+        mode: '0755'
+  roles:
+    - role: nfs-client
+      vars:
+        mnt_source: "{{ hostvars['compa'].ansible_host }}:/tmp/letsplay"
+        mnt_local_path: "/tmp/letsplay2"
+    - role: geerlingguy.docker
+      vars:
+        docker_edition: ce
+        docker_install_compose: true
+  tasks:
+    - name: deploy nginx to docker with expose 8080 and mount for shared nfs path
+      community.docker.docker_container:
+        name: nginx
+        image: nginx:1.27.4-alpine
+        recreate: true
+        state: started
+        published_ports:
+          - 8080:80
+        volumes:
+          - /tmp/letsplay2/inventory.txt:/usr/share/nginx/html/index.html:ro

@@ -1,0 +1,8 @@
+#SPDX-License-Identifier: MIT-0
+---
+# handlers file for common
+
+
+- name: netplan apply
+  ansible.builtin.command: netplan apply
+  become: true

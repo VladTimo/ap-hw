@@ -1,0 +1,18 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for nfs-client
+
+- name: nfs client install
+  become: true
+  ansible.builtin.apt:
+    update_cache: true
+    pkg: nfs-common
+    state: present
+
+- name: mount shared nfs
+  become: yes
+  ansible.posix.mount:
+    src: "{{ mnt_source }}"
+    path: "{{ mnt_local_path }}"
+    state: mounted
+    fstype: nfs

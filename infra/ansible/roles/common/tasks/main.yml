@@ -1,0 +1,81 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for common
+- name: create group
+  ansible.builtin.shell: |
+    if ! getent group CNS > /dev/null; then
+      addgroup --force-badname CNS
+    fi
+  register: group_creation_result
+  changed_when: group_creation_result.rc == 0
+  tags: create_group
+
+- name: create user
+  ansible.builtin.user:
+    name: candidate
+    group: CNS
+  tags: create_user
+
+- name: create directory
+  ansible.builtin.file:
+    path: /tmp/letsplay
+    state: directory
+    owner: candidate
+    group: CNS
+    mode: '0755'
+    recurse: true
+  tags: create_folder
+
+- name: create inventory file
+  ansible.builtin.copy:
+    dest: /tmp/letsplay/inventory.txt
+    content: "homework inventory file"
+    owner: candidate
+    group: CNS
+    mode: '0755'
+  tags: create_file
+
+- name: run commands to collect data for inventory.txt
+  ansible.builtin.shell: "{{ item.value.cmd }}"
+  register: command_result
+  loop: "{{ dict(sysinfo_commands) | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  tags: run_collect_commands
+
+- name: get command results as facts
+  ansible.builtin.set_fact:
+    "{{ item.item.key }}": "{{ item }}"
+  loop: "{{ command_result.results }}"
+  loop_control:
+    label: "{{ item.item.key }}"
+  tags: collect_sysinfo
+
+- name: set system data as fact to copy to inventory.txt
+  ansible.builtin.set_fact:
+    system_info_text: |
+      Disk Info:
+      {{ disk_type.stdout }}
+
+      Packages:
+      {{ packages_info.stdout }}
+
+      CPU Info:
+      {{ cpu_info.stdout }}
+
+      LVM partitions Info:
+      {{ lvm_info.stdout }}
+
+      Processes top 5:
+      {{ top_processes_info.stdout }}
+
+- name: write system info from facts to inventory.txt
+  ansible.builtin.copy:
+    dest: /tmp/letsplay/inventory.txt
+    content: "{{ system_info_text }}"
+    owner: candidate
+    group: CNS
+    mode: '0755'
+
+- name: network configuration - firewall and mtu
+  ansible.builtin.include_tasks: network-conf.yml

@@ -1,0 +1,9 @@
+- name: CompA common
+  hosts: compa
+  become: true
+  vars:
+    nfs_exports:
+      - "/tmp/letsplay *(rw,sync,subtree_check,no_root_squash)"
+  roles:
+    - role: common
+    - role: geerlingguy.nfs
